@@ -1,0 +1,364 @@
+# データベース仕様書: タスク管理およびビデオ処理システム（SQLite3向け最終版）
+
+## 1. 概要
+この仕様書は、タスク、被験者、ビデオデータ、タグ、コアライブラリ、アルゴリズム、およびそれらの出力結果を管理するデータベースの設計を記述します。システムは、ビデオデータに基づくタスクのタグ付け、コアライブラリとアルゴリズムのバージョン管理（自己参照を含む）、および出力結果の追跡を目的としています。
+
+- **対象システム**: ビデオ処理および評価システム
+- **データベース**: SQLite3（軽量、組み込み型、サーバーレス）
+- **バージョン管理**: コアライブラリとアルゴリズムのバージョンは文字列形式（例: `1.0.0`）で管理。コミットハッシュはGitのSHA-1（40文字）で特定。
+- **関係性**: 外部キー（FK）によりエンティティを連結。`core_lib_table`と`algorithm_table`は自己参照。
+- **日付**: 2025年8月18日（最終改訂）
+- **SQLite3特記事項**:
+  - 外部キー制約は`PRAGMA foreign_keys = ON;`で有効化。
+  - データ型は動的だが、仕様書では明示（例: `VARCHAR(100)` → `TEXT`）。
+  - 主キーは`INTEGER PRIMARY KEY AUTOINCREMENT`で自動増分。
+
+この仕様書には、ER図（Mermaid記法）、テーブル詳細、関係性、データ型推奨、SQLite3用SQLスキーマ例を含めます。
+
+## 2. ER図
+以下は、Mermaid記法によるER図です。SQLite3のデータ型（`TEXT`など）に合わせて記述し、[Mermaid Live Editor](https://mermaid.live/)で視覚化してください。最新バージョンのMermaid（v10.9.0以降）を使用することでレンダリングエラーを回避できます。
+
+```mermaid
+erDiagram
+    task_table {
+        INTEGER task_ID PK "タスクのID (主キー)"
+        INTEGER task_set "タスクのセット名（例: 正検知評価用1）"
+        TEXT task_name "タスクの名前 (最大100文字)"
+        TEXT task_describe "タスクの内容"
+    }
+
+    subject_table {
+        INTEGER subject_ID PK "被験者のID (主キー)"
+        TEXT subject_name "被験者名 (最大100文字)"
+    }
+
+    video_table {
+        INTEGER video_ID PK "ビデオのID (主キー)"
+        TEXT video_dir "ビデオデータの格納ディレクトリ (最大255文字)"
+        INTEGER subject_ID FK "記録されている被験者のID"
+        TEXT video_date "取得日 (YYYY-MM-DD)"
+        INTEGER video_length "秒単位のビデオ尺"
+    }
+
+    tag_table {
+        INTEGER tag_ID PK "タグのID (主キー)"
+        INTEGER video_ID FK "タスクが記録されている動画のID"
+        INTEGER task_ID FK "対応するタスクのID"
+        INTEGER start "タスクの開始frame"
+        INTEGER end "タスクの終了frame"
+    }
+
+    core_lib_table {
+        INTEGER core_lib_ID PK "コアライブラリのID (主キー)"
+        TEXT core_lib_version "バージョン情報 (最大20文字)"
+        TEXT core_lib_update_information "簡単なアップデート内容"
+        INTEGER core_lib_base_version_ID FK "アップデート元のcore_lib_ID"
+        TEXT core_lib_commit_hash "コミットと紐づけるためのhash値 (40文字)"
+    }
+
+    core_lib_output_table {
+        INTEGER core_lib_output_ID PK "コアライブラリ出力のID (主キー)"
+        INTEGER core_lib_ID FK "評価に使用したコアライブラリのID"
+        INTEGER video_ID FK "評価に使用した動画のID"
+        TEXT core_lib_output_dir "出力結果格納先ディレクトリ (最大255文字)"
+    }
+
+    algorithm_table {
+        INTEGER algorithm_ID PK "アルゴリズムのID (主キー)"
+        TEXT algorithm_version "バージョン情報 (最大20文字)"
+        TEXT algorithm_update_information "簡単なアップデート内容"
+        INTEGER algorithm_base_version_ID FK "アップデート元のalgorithm_ID"
+        TEXT algorithm_commit_hash "コミットと紐づけるためのhash値 (40文字)"
+    }
+
+    algorithm_output_table {
+        INTEGER algorithm_output_ID PK "アルゴリズム出力のID (主キー)"
+        INTEGER algorithm_ID FK "評価に使用したアルゴリズムのID"
+        INTEGER core_lib_output_ID FK "評価に使用したコアライブラリ出力のID"
+        TEXT algorithm_output_dir "出力結果格納先ディレクトリ (最大255文字)"
+    }
+
+    subject_table ||--o{ video_table : "1人の被験者が複数のビデオを持つ (1:N)"
+    video_table ||--o{ tag_table : "1つのビデオが複数のタグを持つ (1:N)"
+    task_table ||--o{ tag_table : "1つのタスクが複数のタグに関連 (1:N)"
+    video_table ||--o{ core_lib_output_table : "1つのビデオが複数の出力結果を生む (1:N)"
+    core_lib_table ||--o{ core_lib_output_table : "1つのコアライブラリが複数の出力で使用 (1:N)"
+    core_lib_table ||--o| core_lib_table : "コアライブラリが前のバージョンを基盤とする (自己参照, 1:N)"
+    algorithm_table ||--o{ algorithm_output_table : "1つのアルゴリズムが複数の出力で使用 (1:N)"
+    core_lib_output_table ||--o{ algorithm_output_table : "1つのコアライブラリ出力が複数のアルゴリズム出力に使用 (1:N)"
+    algorithm_table ||--o| algorithm_table : "アルゴリズムが前のバージョンを基盤とする (自己参照, 1:N)"
+```
+
+### ER図の説明
+- **エンティティ**: 各テーブルをボックスで表現。アトリビュートはSQLite3のデータ型（`INTEGER`, `TEXT`）と説明付き。
+- **関係性**: 外部キー（FK）に基づく1:N関係を`||--o{`で、自己参照を`||--o|`で表現。ラベルで意味を明確化。
+- **主キー (PK)**: 各テーブルの`ID`を`INTEGER PRIMARY KEY AUTOINCREMENT`で設定。
+- **外部キー (FK)**: 関係性の基点。`core_lib_base_version_ID`（`core_lib_table`の自己参照）と`algorithm_base_version_ID`（`algorithm_table`の自己参照）を反映。
+- **多対多関係**: `tag_table`が`video_table`と`task_table`を仲介。
+
+## 3. テーブル詳細
+各テーブルのアトリビュート、データ型、説明、制約を以下に示します。SQLite3ではデータ型は動的だが、仕様書では明示的に記述（例: `VARCHAR(100)` → `TEXT`、長さはドキュメント用）。
+
+### task_table (タスクテーブル)
+- **目的**: タスクの情報を管理。
+- **アトリビュート**:
+  | アトリビュート | データ型 | 説明 | 制約 |
+  |----------------|----------|------|------|
+  | task_ID | INTEGER | タスクのID | PK, AUTOINCREMENT |
+  | task_set | INTEGER | タスクのセット名（例: 正検知評価用1） | - |
+  | task_name | TEXT | タスクの名前（最大100文字） | - |
+  | task_describe | TEXT | タスクの内容 | - |
+
+### subject_table (被験者テーブル)
+- **目的**: 被験者の情報を管理。
+- **アトリビュート**:
+  | アトリビュート | データ型 | 説明 | 制約 |
+  |----------------|----------|------|------|
+  | subject_ID | INTEGER | 被験者のID | PK, AUTOINCREMENT |
+  | subject_name | TEXT | 被験者名（最大100文字） | - |
+
+### video_table (ビデオテーブル)
+- **目的**: ビデオデータのメタデータを管理。
+- **アトリビュート**:
+  | アトリビュート | データ型 | 説明 | 制約 |
+  |----------------|----------|------|------|
+  | video_ID | INTEGER | ビデオのID | PK, AUTOINCREMENT |
+  | video_dir | TEXT | ビデオデータの格納ディレクトリ（最大255文字） | - |
+  | subject_ID | INTEGER | 記録されている被験者のID | FK (subject_table.subject_ID) |
+  | video_date | TEXT | 取得日（YYYY-MM-DD形式） | - |
+  | video_length | INTEGER | 秒単位のビデオ尺 | - |
+
+### tag_table (タグテーブル)
+- **目的**: ビデオ内のタスク区間をタグ付け。
+- **アトリビュート**:
+  | アトリビュート | データ型 | 説明 | 制約 |
+  |----------------|----------|------|------|
+  | tag_ID | INTEGER | タグのID | PK, AUTOINCREMENT |
+  | video_ID | INTEGER | タスクが記録されている動画のID | FK (video_table.video_ID) |
+  | task_ID | INTEGER | 対応するタスクのID | FK (task_table.task_ID) |
+  | start | INTEGER | タスクの開始frame | - |
+  | end | INTEGER | タスクの終了frame | - |
+
+### core_lib_table (コアライブラリテーブル)
+- **目的**: コアライブラリのバージョンと更新情報を管理。自己参照でバージョン履歴を追跡。
+- **アトリビュート**:
+  | アトリビュート | データ型 | 説明 | 制約 |
+  |----------------|----------|------|------|
+  | core_lib_ID | INTEGER | コアライブラリのID | PK, AUTOINCREMENT |
+  | core_lib_version | TEXT | バージョン情報（最大20文字、例: 1.0.0） | - |
+  | core_lib_update_information | TEXT | 簡単なアップデート内容 | - |
+  | core_lib_base_version_ID | INTEGER | アップデート元のcore_lib_ID | FK (core_lib_table.core_lib_ID, 自己参照) |
+  | core_lib_commit_hash | TEXT | コミットと紐づけるためのhash値（40文字、SHA-1） | UNIQUE |
+
+### core_lib_output_table (コアライブラリ出力テーブル)
+- **目的**: コアライブラリの処理出力結果を管理。
+- **アトリビュート**:
+  | アトリビュート | データ型 | 説明 | 制約 |
+  |----------------|----------|------|------|
+  | core_lib_output_ID | INTEGER | 出力のID | PK, AUTOINCREMENT |
+  | core_lib_ID | INTEGER | 評価に使用したコアライブラリのID | FK (core_lib_table.core_lib_ID) |
+  | video_ID | INTEGER | 評価に使用した動画のID | FK (video_table.video_ID) |
+  | core_lib_output_dir | TEXT | 出力結果格納先ディレクトリ（最大255文字） | - |
+
+### algorithm_table (アルゴリズムテーブル)
+- **目的**: アルゴリズムのバージョンと更新情報を管理。自己参照でバージョン履歴を追跡。
+- **アトリビュート**:
+  | アトリビュート | データ型 | 説明 | 制約 |
+  |----------------|----------|------|------|
+  | algorithm_ID | INTEGER | アルゴリズムのID | PK, AUTOINCREMENT |
+  | algorithm_version | TEXT | バージョン情報（最大20文字、例: 2.1.0） | - |
+  | algorithm_update_information | TEXT | 簡単なアップデート内容 | - |
+  | algorithm_base_version_ID | INTEGER | アップデート元のalgorithm_ID | FK (algorithm_table.algorithm_ID, 自己参照) |
+  | algorithm_commit_hash | TEXT | コミットと紐づけるためのhash値（40文字、SHA-1） | UNIQUE |
+
+### algorithm_output_table (アルゴリズム出力テーブル)
+- **目的**: アルゴリズムの処理出力結果を管理。
+- **アトリビュート**:
+  | アトリビュート | データ型 | 説明 | 制約 |
+  |----------------|----------|------|------|
+  | algorithm_output_ID | INTEGER | 出力のID | PK, AUTOINCREMENT |
+  | algorithm_ID | INTEGER | 評価に使用したアルゴリズムのID | FK (algorithm_table.algorithm_ID) |
+  | core_lib_output_ID | INTEGER | 評価に使用したコアライブラリ出力のID | FK (core_lib_output_table.core_lib_output_ID) |
+  | algorithm_output_dir | TEXT | 出力結果格納先ディレクトリ（最大255文字） | - |
+
+## 4. 関係性詳細
+- **1:N関係**:
+  - `subject_table` : `video_table` (1人の被験者が複数のビデオを持つ)。
+  - `video_table` : `tag_table` (1つのビデオが複数のタグを持つ)。
+  - `task_table` : `tag_table` (1つのタスクが複数のタグに関連)。
+  - `video_table` : `core_lib_output_table` (1つのビデオが複数の出力結果を生む)。
+  - `core_lib_table` : `core_lib_output_table` (1つのコアライブラリが複数の出力で使用)。
+  - `algorithm_table` : `algorithm_output_table` (1つのアルゴリズムが複数の出力で使用)。
+  - `core_lib_output_table` : `algorithm_output_table` (1つのコアライブラリ出力が複数のアルゴリズム出力に使用)。
+- **自己参照 (1:N)**:
+  - `core_lib_table` (`core_lib_base_version_ID`が`core_lib_ID`を参照)。
+  - `algorithm_table` (`algorithm_base_version_ID`が`algorithm_ID`を参照)。
+- **多対多関係**: `tag_table`が`video_table`と`task_table`を仲介。
+- **整合性**: SQLite3ではFK制約を有効化（`PRAGMA foreign_keys = ON;`）し、`ON DELETE RESTRICT`で参照データの削除を防止。自己参照FKは`ON DELETE SET NULL`で安全性を確保。
+
+## 5. データ型と制約の推奨
+- **データ型選択の基準**:
+  - SQLite3は動的型付けだが、仕様書では以下の型を明示：
+    - 整数: `INTEGER`（例: ID、フレーム番号、秒数）。
+    - 文字列（短い）: `TEXT`（例: `task_name`, 最大100文字）。
+    - 文字列（長い）: `TEXT`（例: `task_describe`）。
+    - パス: `TEXT`（例: `video_dir`, 最大255文字）。
+    - バージョン: `TEXT`（例: `core_lib_version`, 最大20文字）。
+    - コミットハッシュ: `TEXT`（例: `core_lib_commit_hash`, 40文字）。
+    - 日付: `TEXT`（例: `video_date`, `YYYY-MM-DD`形式。SQLite3に専用型なし）。
+- **追加制約**:
+  - すべてのPK: `INTEGER PRIMARY KEY AUTOINCREMENT`。
+  - コミットハッシュ: `UNIQUE`（衝突防止）。
+  - バージョン: `INDEX`推奨（例: `CREATE INDEX idx_version ON core_lib_table(core_lib_version);`）。
+  - フレーム (`start`, `end`): アプリ層で`start < end`を検証（SQLite3の`CHECK`制約は簡易）。
+- **SQLite3特記事項**:
+  - `VARCHAR(n)`は`TEXT`として扱われるが、仕様書では長さ（例: 100, 255）を明示。
+  - 日付は`TEXT`（`YYYY-MM-DD`）で保存。必要なら`DATETIME`形式（例: `2025-08-18 15:22:00`）に変更。
+  - FKは明示的に有効化が必要。
+
+## 6. SQLスキーマ例 (SQLite3用)
+以下は、SQLite3でテーブルを作成するSQL例です。データベースファイル（例: `video_task.db`）を作成後に実行してください。
+
+```sql
+-- 外部キー制約を有効化
+PRAGMA foreign_keys = ON;
+
+-- task_table
+CREATE TABLE task_table (
+    task_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    task_set INTEGER,
+    task_name TEXT,
+    task_describe TEXT
+);
+
+-- subject_table
+CREATE TABLE subject_table (
+    subject_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    subject_name TEXT
+);
+
+-- video_table
+CREATE TABLE video_table (
+    video_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    video_dir TEXT,
+    subject_ID INTEGER,
+    video_date TEXT,
+    video_length INTEGER,
+    FOREIGN KEY (subject_ID) REFERENCES subject_table(subject_ID) ON DELETE RESTRICT
+);
+
+-- tag_table
+CREATE TABLE tag_table (
+    tag_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    video_ID INTEGER,
+    task_ID INTEGER,
+    start INTEGER,
+    end INTEGER,
+    FOREIGN KEY (video_ID) REFERENCES video_table(video_ID) ON DELETE RESTRICT,
+    FOREIGN KEY (task_ID) REFERENCES task_table(task_ID) ON DELETE RESTRICT
+);
+
+-- core_lib_table
+CREATE TABLE core_lib_table (
+    core_lib_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    core_lib_version TEXT,
+    core_lib_update_information TEXT,
+    core_lib_base_version_ID INTEGER,
+    core_lib_commit_hash TEXT UNIQUE,
+    FOREIGN KEY (core_lib_base_version_ID) REFERENCES core_lib_table(core_lib_ID) ON DELETE SET NULL
+);
+
+-- core_lib_output_table
+CREATE TABLE core_lib_output_table (
+    core_lib_output_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    core_lib_ID INTEGER,
+    video_ID INTEGER,
+    core_lib_output_dir TEXT,
+    FOREIGN KEY (core_lib_ID) REFERENCES core_lib_table(core_lib_ID) ON DELETE RESTRICT,
+    FOREIGN KEY (video_ID) REFERENCES video_table(video_ID) ON DELETE RESTRICT
+);
+
+-- algorithm_table
+CREATE TABLE algorithm_table (
+    algorithm_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    algorithm_version TEXT,
+    algorithm_update_information TEXT,
+    algorithm_base_version_ID INTEGER,
+    algorithm_commit_hash TEXT UNIQUE,
+    FOREIGN KEY (algorithm_base_version_ID) REFERENCES algorithm_table(algorithm_ID) ON DELETE SET NULL
+);
+
+-- algorithm_output_table
+CREATE TABLE algorithm_output_table (
+    algorithm_output_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    algorithm_ID INTEGER,
+    core_lib_output_ID INTEGER,
+    algorithm_output_dir TEXT,
+    FOREIGN KEY (algorithm_ID) REFERENCES algorithm_table(algorithm_ID) ON DELETE RESTRICT,
+    FOREIGN KEY (core_lib_output_ID) REFERENCES core_lib_output_table(core_lib_output_ID) ON DELETE RESTRICT
+);
+
+-- インデックス作成（オプション、検索高速化）
+CREATE INDEX idx_core_lib_version ON core_lib_table(core_lib_version);
+CREATE INDEX idx_algorithm_version ON algorithm_table(algorithm_version);
+```
+
+### SQLの説明
+- **外部キー有効化**: `PRAGMA foreign_keys = ON;`をセッション開始時またはアプリ起動時に実行。
+- **データ型**: SQLite3では`INTEGER`（整数）、`TEXT`（文字列）、`REAL`（浮動小数点）を使用。`VARCHAR(n)`は`TEXT`に統一し、長さはドキュメントで明示。
+- **主キー**: `INTEGER PRIMARY KEY AUTOINCREMENT`で自動増分。
+- **FK制約**: `ON DELETE RESTRICT`で参照データの削除を防止。自己参照FK（`core_lib_base_version_ID`, `algorithm_base_version_ID`）は`ON DELETE SET NULL`で安全性を確保。
+- **インデックス**: バージョン検索を高速化するため、`core_lib_version`と`algorithm_version`にインデックスを推奨。
+- **テスト例**:
+  ```sql
+  INSERT INTO task_table (task_set, task_name, task_describe) VALUES (1, 'Task1', 'Evaluate positive detection');
+  INSERT INTO subject_table (subject_name) VALUES ('Subject A');
+  INSERT INTO video_table (video_dir, subject_ID, video_date, video_length) VALUES ('/videos/subject_a.mp4', 1, '2025-08-18', 120);
+  ```
+
+## 7. 運用・メンテナンス
+- **データ挿入フロー**:
+  1. `subject_table` → `video_table` → `tag_table`（ビデオとタスクの関連付け）。
+  2. `core_lib_table` → `core_lib_output_table`（ライブラリ出力）。
+  3. `algorithm_table` → `algorithm_output_table`（アルゴリズム出力）。
+- **クエリ例**:
+  - ビデオのタグ取得:
+    ```sql
+    SELECT t.*, v.video_dir, tk.task_name
+    FROM tag_table t
+    JOIN video_table v ON t.video_ID = v.video_ID
+    JOIN task_table tk ON t.task_ID = tk.task_ID;
+    ```
+  - 最新バージョンのコアライブラリ:
+    ```sql
+    SELECT * FROM core_lib_table
+    WHERE core_lib_version = (SELECT MAX(core_lib_version) FROM core_lib_table);
+    ```
+- **バックアップ**: SQLite3は単一ファイル（例: `video_task.db`）なので、ファイルをコピー（`cp video_task.db backup.db`）。
+- **セキュリティ**: 機密データ（例: `subject_name`）はアプリ層で暗号化。SQLite3はファイルアクセス制御で保護。
+- **監査ログ**: 必要なら`audit_log`テーブルを追加（例: `CREATE TABLE audit_log (id INTEGER PRIMARY KEY AUTOINCREMENT, action TEXT, timestamp TEXT);`）。
+- **SQLite3特記事項**:
+  - トランザクション使用（`BEGIN TRANSACTION; ... COMMIT;`）でデータ整合性を確保。
+  - 日付操作は`TEXT`形式でアプリ層で処理（例: `strftime`関数使用）。
+
+## 8. 注意点
+- **データ型**:
+  - `task_set`: 数値（`INTEGER`）と仮定。文字列（例: `正検知評価用1`）の場合は`TEXT`に変更（例: `ALTER TABLE task_table MODIFY task_set TEXT;`）。
+  - `video_date`: `TEXT`（`YYYY-MM-DD`）で保存。時間が必要なら`TEXT`で`YYYY-MM-DD HH:MM:SS`形式。
+  - コミットハッシュ: SHA-1（40文字）を想定。SHA-256（64文字）の場合は`TEXT`（長さ64文字）に変更。
+- **エラー回避**:
+  - Mermaidコードがレンダリングできない場合、Mermaidの最新版（v10.9.0以降）を使用。コードをコピーする際、余分な空白や特殊文字を除去。
+  - SQLite3でFKエラーが発生する場合、`PRAGMA foreign_keys = ON;`が実行されているか確認。
+- **拡張性**:
+  - 複数リポジトリ対応の場合、`core_lib_table`と`algorithm_table`に`repository_name TEXT`を追加可能。
+  - フレーム検証（`start < end`）はアプリ層で実装（SQLite3の`CHECK`制約は簡易）。
+- **パフォーマンス**: SQLite3は小規模データ向け。大量データの場合はインデックスを追加し、クエリを最適化。
+
+## 9. まとめ
+この仕様書は、提供された最新のエンティティ情報を基に、SQLite3向けにデータベースの構造、関係性、SQL実装を詳細に定義しました。ER図はMermaid記法で視覚化可能で、SQLスキーマはSQLite3の特性（動的型付け、FK有効化）を考慮しています。以下の追加対応が可能です：
+- 特定ユースケース（例: 複雑なクエリ、トリガー）の追加。
+- PlantUMLなど他のフォーマットでのER図。
+- サンプルデータやテストスクリプトの提供。
+- `task_set`や`video_date`のデータ型変更（例: `TEXT`への変更）。
+
+ご確認の上、追加要件や修正点があればお知らせください。
