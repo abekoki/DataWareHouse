@@ -1,0 +1,13 @@
+[project]
+name = "datawarehouse"
+version = "0.1.0"
+description = "Data warehouse schema and tooling for the video processing evaluation system"
+readme = "00_design/database_spec_with_timing.md"
+requires-python = ">=3.10"
+dependencies = []
+
+[build-system]
+requires = ["hatchling>=1.25.0"]
+build-backend = "hatchling.build"
+
+
