@@ -97,7 +97,7 @@ CREATE TABLE video_table (
 | フィールド名 | データ型 | 制約 | 説明 | 例 |
 |-------------|----------|------|------|-----|
 | `video_ID` | INTEGER | PK, AUTOINCREMENT | ビデオの一意識別子 | 1, 2, 3... |
-| `video_dir` | TEXT | - | ビデオファイルのパス | "01_mov_data/subject_a.mp4" |
+| `video_dir` | TEXT | - | ビデオファイルのパス（database.dbからの相対パス） | "01_mov_data/subject_a.mp4" |
 | `subject_ID` | INTEGER | FK | 被験者ID | 1（subject_table.subject_IDを参照） |
 | `video_date` | TEXT | - | 取得日（YYYY-MM-DD） | "2025-08-19" |
 | `video_length` | INTEGER | - | ビデオの長さ（秒） | 120, 300 |
@@ -220,7 +220,7 @@ CREATE TABLE core_lib_output_table (
 | `core_lib_output_ID` | INTEGER | PK, AUTOINCREMENT | 出力の一意識別子 | 1, 2, 3... |
 | `core_lib_ID` | INTEGER | FK | コアライブラリID | 1（core_lib_table.core_lib_IDを参照） |
 | `video_ID` | INTEGER | FK | ビデオID | 1（video_table.video_IDを参照） |
-| `core_lib_output_dir` | TEXT | - | 出力ディレクトリパス | "02_core_lib_output/v1.0.0_subject_a" |
+| `core_lib_output_dir` | TEXT | - | 出力ディレクトリパス（database.dbからの相対パス） | "02_core_lib_output/v1.0.0_subject_a" |
 
 #### 外部キー制約
 - `core_lib_ID` → `core_lib_table.core_lib_ID`
@@ -301,7 +301,7 @@ CREATE TABLE algorithm_output_table (
 | `algorithm_output_ID` | INTEGER | PK, AUTOINCREMENT | 出力の一意識別子 | 1, 2, 3... |
 | `algorithm_ID` | INTEGER | FK | アルゴリズムID | 1（algorithm_table.algorithm_IDを参照） |
 | `core_lib_output_ID` | INTEGER | FK | コアライブラリ出力ID | 1（core_lib_output_table.core_lib_output_IDを参照） |
-| `algorithm_output_dir` | TEXT | - | 出力ディレクトリパス | "03_algorithm_output/v2.0.0_core_v1.0.0" |
+| `algorithm_output_dir` | TEXT | - | 出力ディレクトリパス（database.dbからの相対パス） | "03_algorithm_output/v2.0.0_core_v1.0.0" |
 
 #### 外部キー制約
 - `algorithm_ID` → `algorithm_table.algorithm_ID`
@@ -343,6 +343,35 @@ algorithm_table (1) ←→ (N) algorithm_table (algorithm_base_version_ID)
 ```
 video_table ←→ task_table (tag_tableを介して)
 ```
+
+## パス記録仕様
+
+### 1. 相対パスの使用
+- **すべてのディレクトリパス・ファイルパスは`database.db`ファイルからの相対パスで記録**
+- 絶対パスは使用せず、プロジェクトの可搬性を確保
+- パス区切り文字は環境に依存（Windows: `\`, Unix系: `/`）
+
+### 2. 対象フィールド
+- `video_table.video_dir` - ビデオファイルのパス
+- `core_lib_output_table.core_lib_output_dir` - コアライブラリ出力ディレクトリ
+- `algorithm_output_table.algorithm_output_dir` - アルゴリズム出力ディレクトリ
+
+### 3. パス例
+```
+database.db（基準点）
+├── 01_mov_data/
+│   ├── subject_a_task1.mp4  → "01_mov_data/subject_a_task1.mp4"
+│   └── subject_b_task1.mp4  → "01_mov_data/subject_b_task1.mp4"
+├── 02_core_lib_output/
+│   └── v1.0.0_subject_a/    → "02_core_lib_output/v1.0.0_subject_a"
+└── 03_algorithm_output/
+    └── v2.0.0_core_v1.0.0/  → "03_algorithm_output/v2.0.0_core_v1.0.0"
+```
+
+### 4. APIでのパス処理
+- API使用時は相対パスで指定
+- 実際のファイルアクセス時は`os.path.join(db_dir, relative_path)`で絶対パス化
+- プロジェクトの移動・コピー時もパス関係を維持
 
 ## データ整合性ルール
 

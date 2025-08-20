@@ -116,6 +116,7 @@ def create_video(video_dir: str, subject_id: int, video_date: str,
                  video_length: int, db_path: str = "database.db") -> int
 ```
 新しいビデオを登録します。
+- `video_dir`: database.dbからの相対パス
 - `video_date`: YYYY-MM-DD形式
 - `video_length`: 秒単位
 
@@ -195,6 +196,7 @@ def create_core_lib_output(core_lib_id: int, video_id: int, output_dir: str,
                           db_path: str = "database.db") -> int
 ```
 コアライブラリの評価結果を登録します。
+- `output_dir`: database.dbからの相対パス
 
 ### 7. アルゴリズム管理API
 
@@ -219,6 +221,7 @@ def create_algorithm_output(algorithm_id: int, core_lib_output_id: int, output_d
                            db_path: str = "database.db") -> int
 ```
 アルゴリズムの評価結果を登録します。
+- `output_dir`: database.dbからの相対パス
 
 #### get_latest_algorithm_version
 ```python
@@ -266,6 +269,65 @@ def get_processing_pipeline_summary(video_id: Optional[int] = None,
                                    db_path: str = "database.db") -> List[Dict]
 ```
 処理パイプラインの概要を取得します。
+
+## パス管理仕様
+
+### 相対パスの使用
+**すべてのファイル・ディレクトリパスは`database.db`ファイルからの相対パスで記録されます。**
+
+#### 対象フィールド
+- `video_table.video_dir` - ビデオファイルのパス
+- `core_lib_output_table.core_lib_output_dir` - コアライブラリ出力ディレクトリ
+- `algorithm_output_table.algorithm_output_dir` - アルゴリズム出力ディレクトリ
+
+#### パス記録例
+```python
+# ビデオファイルの登録（相対パスで指定）
+video_id = create_video(
+    video_dir="01_mov_data/subject_a_task1.mp4",  # database.dbからの相対パス
+    subject_id=1,
+    video_date="2025-08-19",
+    video_length=120
+)
+
+# コアライブラリ出力の登録（相対パスで指定）
+output_id = create_core_lib_output(
+    core_lib_id=1,
+    video_id=1,
+    output_dir="02_core_lib_output/v1.0.0_subject_a"  # database.dbからの相対パス
+)
+
+# アルゴリズム出力の登録（相対パスで指定）
+algo_output_id = create_algorithm_output(
+    algorithm_id=1,
+    core_lib_output_id=1,
+    output_dir="03_algorithm_output/v2.0.0_core_v1.0.0"  # database.dbからの相対パス
+)
+```
+
+#### ファイルアクセス時の処理
+```python
+from pathlib import Path
+
+# データベースファイルの場所を基準とする
+db_path = Path("database.db")
+db_dir = db_path.parent
+
+# 相対パスから絶対パスへの変換
+video = get_video(1)
+full_video_path = db_dir / video['video_dir']
+
+# ファイル存在確認
+if full_video_path.exists():
+    print(f"ビデオファイル: {full_video_path}")
+else:
+    print(f"ファイルが見つかりません: {full_video_path}")
+```
+
+### プロジェクトの可搬性
+- 相対パス使用により、プロジェクト全体を別の場所に移動しても動作
+- 絶対パスは使用せず、環境に依存しない構成
+- `pathlib.Path`の使用を推奨（クロスプラットフォーム対応）
 
 ## 使用例
 

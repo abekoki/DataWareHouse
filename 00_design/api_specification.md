@@ -137,7 +137,7 @@ def create_video(video_dir: str, subject_id: int, video_date: str, video_length:
     新しいビデオを登録
     
     Args:
-        video_dir: ビデオファイルのディレクトリパス
+        video_dir: ビデオファイルのディレクトリパス（database.dbからの相対パス）
         subject_id: 被験者ID
         video_date: 取得日（YYYY-MM-DD）
         video_length: ビデオの長さ（秒）
@@ -241,7 +241,7 @@ def create_core_lib_output(
     Args:
         core_lib_id: コアライブラリID
         video_id: ビデオID
-        output_dir: 出力ディレクトリパス
+        output_dir: 出力ディレクトリパス（database.dbからの相対パス）
     
     Returns:
         core_lib_output_ID: 作成された出力のID
@@ -285,7 +285,7 @@ def create_algorithm_output(
     Args:
         algorithm_id: アルゴリズムID
         core_lib_output_id: コアライブラリ出力ID
-        output_dir: 出力ディレクトリパス
+        output_dir: 出力ディレクトリパス（database.dbからの相対パス）
     
     Returns:
         algorithm_output_ID: 作成された出力のID
@@ -415,6 +415,47 @@ def batch_register_videos(video_data_list: List[dict]):
             conn.rollback()
             raise e
 ```
+
+## パス管理仕様
+
+### 1. 相対パス記録の原則
+- **すべてのディレクトリパス・ファイルパスは`database.db`ファイルからの相対パスで記録**
+- API使用時は相対パスで指定し、絶対パスは使用しない
+- プロジェクトの可搬性を確保し、環境間での移動を容易にする
+
+### 2. 対象API関数
+```python
+# ビデオファイルのパス（相対パス指定）
+create_video("01_mov_data/subject_a.mp4", subject_id, "2025-08-19", 120)
+
+# コアライブラリ出力ディレクトリ（相対パス指定）
+create_core_lib_output(core_lib_id, video_id, "02_core_lib_output/v1.0.0_output")
+
+# アルゴリズム出力ディレクトリ（相対パス指定）
+create_algorithm_output(algo_id, core_output_id, "03_algorithm_output/v2.0.0_result")
+```
+
+### 3. ファイルアクセス時の処理
+```python
+import os
+from pathlib import Path
+
+# データベースディレクトリの取得
+db_dir = Path("database.db").parent
+
+# 相対パスから絶対パスへの変換
+video_path = db_dir / relative_video_path
+output_dir = db_dir / relative_output_path
+
+# ファイル存在確認
+if video_path.exists():
+    print(f"ビデオファイルが見つかりました: {video_path}")
+```
+
+### 4. パス形式の注意点
+- パス区切り文字は環境に依存（Windows: `\`, Unix系: `/`）
+- `pathlib.Path`の使用を推奨（クロスプラットフォーム対応）
+- バックスラッシュのエスケープに注意（Windows環境）
 
 ## パフォーマンス考慮事項
 

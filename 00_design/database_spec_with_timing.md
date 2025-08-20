@@ -122,7 +122,7 @@ SQLite3では動的型付けですが、本仕様では以下の通り明示し�
 - 目的: ビデオメタデータ管理
 - 属性:
   - `video_ID INTEGER`（PK, AUTOINCREMENT）
-  - `video_dir TEXT`（最大255）
+  - `video_dir TEXT`（最大255、database.dbからの相対パス）
   - `subject_ID INTEGER`（FK -> `subject_table.subject_ID`）
   - `video_date TEXT`（YYYY-MM-DD）
   - `video_length INTEGER`（秒）
@@ -151,7 +151,7 @@ SQLite3では動的型付けですが、本仕様では以下の通り明示し�
   - `core_lib_output_ID INTEGER`（PK, AUTOINCREMENT）
   - `core_lib_ID INTEGER`（FK -> `core_lib_table.core_lib_ID`）
   - `video_ID INTEGER`（FK -> `video_table.video_ID`）
-  - `core_lib_output_dir TEXT`（最大255）
+  - `core_lib_output_dir TEXT`（最大255、database.dbからの相対パス）
 
 ### algorithm_table
 - 目的: メインアルゴリズムのバージョン管理（自己参照で履歴）
@@ -168,7 +168,7 @@ SQLite3では動的型付けですが、本仕様では以下の通り明示し�
   - `algorithm_output_ID INTEGER`（PK, AUTOINCREMENT）
   - `algorithm_ID INTEGER`（FK -> `algorithm_table.algorithm_ID`）
   - `core_lib_output_ID INTEGER`（FK -> `core_lib_output_table.core_lib_output_ID`）
-  - `algorithm_output_dir TEXT`（最大255）
+  - `algorithm_output_dir TEXT`（最大255、database.dbからの相対パス）
 
 ## 5. SQLite3用スキーマ例
 アプリケーション起動時に `PRAGMA foreign_keys = ON;` を実行してください。
@@ -266,8 +266,14 @@ CREATE INDEX idx_algorithm_version ON algorithm_table(algorithm_version);
 6. アルゴ評価: `algorithm_output_table` に評価実行結果を登録（自動実行が基本）
 
 ## 7. ディレクトリとの対応（参考）
-- `02_core_lib_output/` ↔ `core_lib_output_table.core_lib_output_dir`
-- `03_algorithm_output/` ↔ `algorithm_output_table.algorithm_output_dir`
+- `02_core_lib_output/` ↔ `core_lib_output_table.core_lib_output_dir`（database.dbからの相対パス）
+- `03_algorithm_output/` ↔ `algorithm_output_table.algorithm_output_dir`（database.dbからの相対パス）
+- `01_mov_data/` ↔ `video_table.video_dir`（database.dbからの相対パス）
+
+### パス記録の仕様
+- すべてのディレクトリパス・ファイルパスは`database.db`ファイルからの相対パスで記録
+- 絶対パスは使用せず、プロジェクトの可搬性を確保
+- パス区切り文字は環境に依存（Windows: `\`, Unix系: `/`）
 
 ## 8. 運用・注意事項
 - 外部キー制約を必ず有効化（`PRAGMA foreign_keys = ON;`）
