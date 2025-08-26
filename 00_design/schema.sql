@@ -76,6 +76,31 @@ CREATE TABLE IF NOT EXISTS algorithm_output_table (
     FOREIGN KEY (core_lib_output_ID) REFERENCES core_lib_output_table(core_lib_output_ID) ON DELETE RESTRICT
 );
 
+-- evaluation_result_table
+CREATE TABLE IF NOT EXISTS evaluation_result_table (
+    evaluation_result_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    version TEXT,
+    algorithm_ID INTEGER,
+    true_positive REAL,
+    false_positive REAL,
+    evaluation_result_dir TEXT,
+    evaluation_timestamp TEXT,
+    FOREIGN KEY (algorithm_ID) REFERENCES algorithm_table(algorithm_ID) ON DELETE RESTRICT
+);
+
+-- evaluation_data_table
+CREATE TABLE IF NOT EXISTS evaluation_data_table (
+    evaluation_data_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    evaluation_result_ID INTEGER,
+    algorithm_output_ID INTEGER,
+    correct_task_num INTEGER,
+    total_task_num INTEGER,
+    evaluation_data_path TEXT,
+    FOREIGN KEY (evaluation_result_ID) REFERENCES evaluation_result_table(evaluation_result_ID) ON DELETE RESTRICT,
+    FOREIGN KEY (algorithm_output_ID) REFERENCES algorithm_output_table(algorithm_output_ID) ON DELETE RESTRICT,
+    CHECK (correct_task_num <= total_task_num)
+);
+
 -- 推奨インデックス
 CREATE INDEX IF NOT EXISTS idx_core_lib_version ON core_lib_table(core_lib_version);
 CREATE INDEX IF NOT EXISTS idx_algorithm_version ON algorithm_table(algorithm_version);

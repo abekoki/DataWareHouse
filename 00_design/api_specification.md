@@ -292,6 +292,94 @@ def create_algorithm_output(
     """
 ```
 
+### 7. 評価管理API
+
+#### 評価結果の登録（evaluation_result_table）
+```python
+def create_evaluation_result(
+    version: str,
+    algorithm_id: int,
+    true_positive: float,
+    false_positive: Optional[float] = None,
+    evaluation_result_dir: str = "",
+    evaluation_timestamp: Optional[str] = None,
+) -> int:
+    """
+    評価結果（集計）のレコードを登録。
+
+    仕様:
+    - false_positive: 1時間当たりの過検知数 [回/h]（0.0〜上限なし、未設定可）
+    - evaluation_result_dir: database.dbからの相対パス
+
+    Returns:
+        evaluation_result_ID
+    """
+```
+
+#### 評価結果の取得
+```python
+def get_evaluation_result(evaluation_result_id: int) -> dict:
+    """
+    評価結果の単一取得。
+    Returns: dict(version, algorithm_ID, true_positive, false_positive, evaluation_result_dir, evaluation_timestamp)
+    """
+```
+
+#### 評価結果の一覧取得
+```python
+def list_evaluation_results(
+    algorithm_id: Optional[int] = None,
+    version: Optional[str] = None,
+) -> List[dict]:
+    """
+    条件で評価結果を一覧取得（アルゴリズムやバージョンでフィルタ可能）。
+    """
+```
+
+#### 個別評価データの登録（evaluation_data_table）
+```python
+def create_evaluation_data(
+    evaluation_result_id: int,
+    algorithm_output_id: int,
+    correct_task_num: int,
+    total_task_num: int,
+    evaluation_data_path: str,
+) -> int:
+    """
+    個別データの評価結果を登録。
+
+    制約:
+    - algorithm_output_id は algorithm_output_table.algorithm_output_ID を参照
+    - correct_task_num <= total_task_num
+    - evaluation_data_path は database.db からの相対パス
+    """
+```
+
+#### 個別評価データの一覧取得
+```python
+def list_evaluation_data(evaluation_result_id: int) -> List[dict]:
+    """
+    指定した評価結果IDに紐づく個別評価データを一覧取得。
+    """
+```
+
+#### 評価概要の取得（派生メトリクス計算）
+```python
+def get_evaluation_overview(evaluation_result_id: int) -> dict:
+    """
+    評価概要を返す（例）:
+    {
+        "version": str,
+        "algorithm_ID": int,
+        "true_positive": float,            # 0.0-1.0
+        "false_positive_per_hour": float,  # 回/h
+        "total_items": int,
+        "total_correct": int,
+        "accuracy": float                  # total_correct / total_items（0除算は0.0）
+    }
+    """
+```
+
 ## 検索・分析API
 
 ### 1. 複合検索API

@@ -229,6 +229,59 @@ def get_latest_algorithm_version(db_path: str = "database.db") -> Optional[Dict]
 ```
 最新のアルゴリズムバージョンを取得します。
 
+### 9. 評価管理API
+
+#### create_evaluation_result
+```python
+def create_evaluation_result(version: str, algorithm_id: int,
+                             true_positive: float,
+                             false_positive: Optional[float] = None,
+                             evaluation_result_dir: str = "",
+                             evaluation_timestamp: Optional[str] = None,
+                             db_path: str = "database.db") -> int
+```
+評価結果（集計）を登録します。
+- `false_positive`: 1時間当たりの過検知数 [回/h]
+- `evaluation_result_dir`: database.dbからの相対パス
+
+#### list_evaluation_results / get_evaluation_result
+```python
+def list_evaluation_results(algorithm_id: Optional[int] = None,
+                            version: Optional[str] = None,
+                            db_path: str = "database.db") -> List[Dict]
+def get_evaluation_result(evaluation_result_id: int,
+                          db_path: str = "database.db") -> Dict
+```
+評価結果を一覧または単体で取得します。
+
+#### create_evaluation_data
+```python
+def create_evaluation_data(evaluation_result_id: int,
+                           algorithm_output_id: int,
+                           correct_task_num: int,
+                           total_task_num: int,
+                           evaluation_data_path: str,
+                           db_path: str = "database.db") -> int
+```
+個別の評価データを登録します。
+- `algorithm_output_id`: `algorithm_output_table.algorithm_output_ID` を参照
+- `correct_task_num <= total_task_num` を満たす必要があります
+- `evaluation_data_path`: database.dbからの相対パス
+
+#### list_evaluation_data
+```python
+def list_evaluation_data(evaluation_result_id: int,
+                         db_path: str = "database.db") -> List[Dict]
+```
+指定した評価結果IDの個別評価データを一覧取得します。
+
+#### get_evaluation_overview（派生メトリクス）
+```python
+def get_evaluation_overview(evaluation_result_id: int,
+                            db_path: str = "database.db") -> Dict
+```
+評価概要（accuracy等の派生値を含む）を返します。
+
 ### 8. 検索・分析API
 
 #### search_task_executions

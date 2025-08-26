@@ -58,3 +58,23 @@
   - api_library_documentation.md: パス管理仕様セクションを追加、実装例とプロジェクトの可搬性について説明
 - プロジェクトの可搬性確保と環境間移動の容易化を図る設計思想を文書化
 - pathlib.Path使用推奨とクロスプラットフォーム対応の重要性を明記
+
+## 2025-08-26
+- 評価テーブル追加の仕様反映：`00_design/ref_design_byGrok4_2.md` を更新（ER図、テーブル詳細、関係性、SQL例を追記）。
+- `00_design/schema.sql` に `evaluation_result_table` と `evaluation_data_table` を追加（FKはON DELETE RESTRICT、`CHECK (correct_task_num <= total_task_num)` を追加）。
+- パスはdatabase.dbからの相対パスで統一。`false_positive`は1時間当たりの過検知数[回/h]、`evaluation_timestamp`を追加。
+- インデックスは現時点では追加せず。
+- 注記修正：`evaluation_data_table.algorithm_output_ID` は `algorithm_output_table.algorithm_output_ID` を参照に統一（仕様とスキーマを修正）。
+- 既存DB非破壊対応：`scripts/create_database.py` を既存DBにもスキーマ適用（CREATE IF NOT EXISTS）する方式に更新。
+- マイグレーションスクリプトを追加：`scripts/migrate_add_evaluation_tables.py`（不足テーブルのみ作成、外部キー有効）。
+ - 実行: `uv run python scripts/migrate_add_evaluation_tables.py` を実施し、`evaluation_result_table`, `evaluation_data_table` をdatabase.dbに非破壊で作成。
+ - 確認: `uv run python scripts/query_db_structure.py` にてテーブル一覧・件数を確認（両テーブルとも作成済、件数0件）。
+ - API仕様整備: `00_design/api_specification.md` に評価API（登録/取得/一覧/概要計算）を追加。`00_design/api_library_documentation.md` に評価APIの使用例・引数を追記。
+
+## 2025-08-26
+- 評価API実装：`datawarehouse/evaluation_api.py` を新規追加。
+  - `create_evaluation_result`, `get_evaluation_result`, `list_evaluation_results`
+  - `create_evaluation_data`, `list_evaluation_data`
+  - `get_evaluation_overview`（派生メトリクス計算: accuracy など）
+- `datawarehouse/__init__.py` に評価APIを公開追加（__all__ 更新）。
+ - 簡易テスト: `uv run python scripts/test_evaluation_api.py` を実行し、評価結果と評価データの作成・概要算出を確認（overview.accuracy=0.9444..., data_count=1）。テストスクリプトはコミット前に削除。

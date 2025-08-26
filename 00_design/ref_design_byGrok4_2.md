@@ -78,6 +78,25 @@ erDiagram
         TEXT algorithm_output_dir "出力結果格納先ディレクトリ (最大255文字)"
     }
 
+    evaluation_result_table {
+        INTEGER evaluation_result_ID PK "評価結果のID (主キー)"
+        TEXT version "評価エンジンのバージョン"
+        INTEGER algorithm_ID FK "評価対象のアルゴリズムID"
+        REAL true_positive "データセット全体の正解率 (0.0-1.0)"
+        REAL false_positive "過検知数 [回/h]"
+        TEXT evaluation_result_dir "評価結果格納ディレクトリのパス（相対）"
+        TEXT evaluation_timestamp "評価実行日時 (YYYY-MM-DD HH:MM:SS)"
+    }
+
+    evaluation_data_table {
+        INTEGER evaluation_data_ID PK "評価データのID (主キー)"
+        INTEGER evaluation_result_ID FK "対応するevaluation_result_tableのID"
+        INTEGER algorithm_output_ID FK "対応するアルゴリズム出力のID（algorithm_output_tableを参照）"
+        INTEGER correct_task_num "データ内の総正解数"
+        INTEGER total_task_num "データ内の総タスク数"
+        TEXT evaluation_data_path "個別データの評価結果CSVのパス（相対）"
+    }
+
     subject_table ||--o{ video_table : "1人の被験者が複数のビデオを持つ (1:N)"
     video_table ||--o{ tag_table : "1つのビデオが複数のタグを持つ (1:N)"
     task_table ||--o{ tag_table : "1つのタスクが複数のタグに関連 (1:N)"
@@ -87,6 +106,9 @@ erDiagram
     algorithm_table ||--o{ algorithm_output_table : "1つのアルゴリズムが複数の出力で使用 (1:N)"
     core_lib_output_table ||--o{ algorithm_output_table : "1つのコアライブラリ出力が複数のアルゴリズム出力に使用 (1:N)"
     algorithm_table ||--o| algorithm_table : "アルゴリズムが前のバージョンを基盤とする (自己参照, 1:N)"
+    algorithm_table ||--o{ evaluation_result_table : "1つのアルゴリズムが複数の評価結果を持つ (1:N)"
+    evaluation_result_table ||--o{ evaluation_data_table : "1つの評価結果が複数の評価データを持つ (1:N)"
+    core_lib_output_table ||--o{ evaluation_data_table : "1つのコアライブラリ出力が複数の評価データに使用 (1:N)"
 ```
 
 ### ER図の説明
@@ -181,6 +203,33 @@ erDiagram
   | core_lib_output_ID | INTEGER | 評価に使用したコアライブラリ出力のID | FK (core_lib_output_table.core_lib_output_ID) |
   | algorithm_output_dir | TEXT | 出力結果格納先ディレクトリ（最大255文字） | - |
 
+### evaluation_result_table (評価結果テーブル)
+- **目的**: アルゴリズム評価の集計結果を管理。
+- **アトリビュート**:
+  | アトリビュート | データ型 | 説明 | 制約 |
+  |----------------|----------|------|------|
+  | evaluation_result_ID | INTEGER | 評価結果のID | PK, AUTOINCREMENT |
+  | version | TEXT | 評価エンジンのバージョン | - |
+  | algorithm_ID | INTEGER | 評価対象のアルゴリズムID | FK (algorithm_table.algorithm_ID) ON DELETE RESTRICT |
+  | true_positive | REAL | データセット全体の正解率 (0.0〜1.0) | - |
+  | false_positive | REAL | 1時間当たりの過検知数 [回/h] | - |
+  | evaluation_result_dir | TEXT | 評価結果格納ディレクトリのパス（相対） | - |
+  | evaluation_timestamp | TEXT | 評価実行日時（YYYY-MM-DD HH:MM:SS） | - |
+
+### evaluation_data_table (評価データテーブル)
+- **目的**: 各データ（例: 動画・区間）ごとの評価結果を管理。
+- **アトリビュート**:
+  | アトリビュート | データ型 | 説明 | 制約 |
+  |----------------|----------|------|------|
+  | evaluation_data_ID | INTEGER | 評価データのID | PK, AUTOINCREMENT |
+  | evaluation_result_ID | INTEGER | 紐づく評価結果のID | FK (evaluation_result_table.evaluation_result_ID) ON DELETE RESTRICT |
+  | algorithm_output_ID | INTEGER | 紐づくアルゴリズム出力のID | FK (algorithm_output_table.algorithm_output_ID) ON DELETE RESTRICT |
+  | correct_task_num | INTEGER | データ内の総正解数 | CHECK (correct_task_num <= total_task_num) |
+  | total_task_num | INTEGER | データ内の総タスク数 | - |
+  | evaluation_data_path | TEXT | 個別データの評価結果CSVのパス（相対） | - |
+
+注: 現時点では各フィールドのNOT NULL制約および追加インデックスは設定しません（将来拡張時に見直し）。
+
 ## 4. 関係性詳細
 - **1:N関係**:
   - `subject_table` : `video_table` (1人の被験者が複数のビデオを持つ)。
@@ -190,6 +239,9 @@ erDiagram
   - `core_lib_table` : `core_lib_output_table` (1つのコアライブラリが複数の出力で使用)。
   - `algorithm_table` : `algorithm_output_table` (1つのアルゴリズムが複数の出力で使用)。
   - `core_lib_output_table` : `algorithm_output_table` (1つのコアライブラリ出力が複数のアルゴリズム出力に使用)。
+  - `algorithm_table` : `evaluation_result_table` (1つのアルゴリズムが複数の評価結果を持つ)。
+  - `evaluation_result_table` : `evaluation_data_table` (1つの評価結果が複数の評価データを持つ)。
+  - `core_lib_output_table` : `evaluation_data_table` (1つのコアライブラリ出力が複数の評価データに使用)。
 - **自己参照 (1:N)**:
   - `core_lib_table` (`core_lib_base_version_ID`が`core_lib_ID`を参照)。
   - `algorithm_table` (`algorithm_base_version_ID`が`algorithm_ID`を参照)。
@@ -296,6 +348,31 @@ CREATE TABLE algorithm_output_table (
     algorithm_output_dir TEXT,
     FOREIGN KEY (algorithm_ID) REFERENCES algorithm_table(algorithm_ID) ON DELETE RESTRICT,
     FOREIGN KEY (core_lib_output_ID) REFERENCES core_lib_output_table(core_lib_output_ID) ON DELETE RESTRICT
+);
+
+-- evaluation_result_table
+CREATE TABLE evaluation_result_table (
+    evaluation_result_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    version TEXT,
+    algorithm_ID INTEGER,
+    true_positive REAL,
+    false_positive REAL,
+    evaluation_result_dir TEXT,
+    evaluation_timestamp TEXT,
+    FOREIGN KEY (algorithm_ID) REFERENCES algorithm_table(algorithm_ID) ON DELETE RESTRICT
+);
+
+-- evaluation_data_table
+CREATE TABLE evaluation_data_table (
+    evaluation_data_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    evaluation_result_ID INTEGER,
+    algorithm_output_ID INTEGER,
+    correct_task_num INTEGER,
+    total_task_num INTEGER,
+    evaluation_data_path TEXT,
+    FOREIGN KEY (evaluation_result_ID) REFERENCES evaluation_result_table(evaluation_result_ID) ON DELETE RESTRICT,
+    FOREIGN KEY (algorithm_output_ID) REFERENCES core_lib_output_table(core_lib_output_ID) ON DELETE RESTRICT,
+    CHECK (correct_task_num <= total_task_num)
 );
 
 -- インデックス作成（オプション、検索高速化）

@@ -32,14 +32,13 @@ def create_database(db_path: Path, schema_sql: str) -> None:
         conn.execute("PRAGMA foreign_keys = ON;")
         
         if db_exists:
-            print("既存のデータベースを更新中...")
-            # 既存データベースの場合は、外部キー制約の設定のみ更新
-            print("外部キー制約の設定を更新しました")
+            print("既存のデータベースを更新中（非破壊）...")
         else:
             print("新しいデータベースを作成中...")
-            # 新規作成の場合は、スキーマを適用
-            conn.executescript(schema_sql)
-            print("スキーマを適用しました")
+
+        # 既存DBでも安全にスキーマ適用（CREATE TABLE IF NOT EXISTS により非破壊）
+        conn.executescript(schema_sql)
+        print("スキーマ（CREATE IF NOT EXISTS）を適用しました")
         
         # 外部キー制約の状態を確認
         cursor = conn.cursor()

@@ -90,6 +90,15 @@ from .analytics_api import (
     get_performance_metrics
 )
 
+from .evaluation_api import (
+    create_evaluation_result,
+    get_evaluation_result,
+    list_evaluation_results,
+    create_evaluation_data,
+    list_evaluation_data,
+    get_evaluation_overview,
+)
+
 __version__ = "0.1.0"
 __all__ = [
     # 接続管理
@@ -167,6 +176,14 @@ __all__ = [
     "check_data_integrity",
     "get_processing_pipeline_summary",
     "get_performance_metrics",
+
+    # 評価管理
+    "create_evaluation_result",
+    "get_evaluation_result",
+    "list_evaluation_results",
+    "create_evaluation_data",
+    "list_evaluation_data",
+    "get_evaluation_overview",
 ]
 
 
