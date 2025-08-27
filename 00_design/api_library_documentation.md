@@ -282,6 +282,54 @@ def get_evaluation_overview(evaluation_result_id: int,
 ```
 評価概要（accuracy等の派生値を含む）を返します。
 
+### 10. 課題分析管理API（新規）
+
+#### create_analysis_result
+```python
+def create_analysis_result(analysis_result_dir: str,
+                           evaluation_result_id: int,
+                           analysis_timestamp: Optional[str] = None,
+                           db_path: str = "database.db") -> int
+```
+課題分析の1実行を登録します。
+- `analysis_result_dir`: database.dbからの相対パス
+- `analysis_timestamp`: "YYYY-MM-DD HH:MM:SS"
+
+#### create_problem
+```python
+def create_problem(problem_name: str,
+                   problem_description: str,
+                   problem_status: str,
+                   analysis_result_id: int,
+                   db_path: str = "database.db") -> int
+```
+抽出された課題を登録します。
+
+#### create_analysis_data
+```python
+def create_analysis_data(evaluation_data_id: int,
+                         analysis_result_id: int,
+                         analysis_data_isproblem: int,
+                         analysis_data_dir: str,
+                         analysis_data_description: str,
+                         problem_id: Optional[int] = None,
+                         db_path: str = "database.db") -> int
+```
+課題分析データを登録します。
+- `analysis_data_isproblem` が 1 の場合、`problem_id` は必須です。
+- 参照整合性は `ON DELETE RESTRICT` で保護されます。
+
+#### 取得系
+```python
+def get_analysis_result(analysis_result_id: int, db_path: str = "database.db") -> Dict
+def list_analysis_results(evaluation_result_id: Optional[int] = None, db_path: str = "database.db") -> List[Dict]
+def get_problem(problem_id: int, db_path: str = "database.db") -> Dict
+def list_problems(analysis_result_id: Optional[int] = None, db_path: str = "database.db") -> List[Dict]
+def list_analysis_data(analysis_result_id: Optional[int] = None,
+                       evaluation_data_id: Optional[int] = None,
+                       db_path: str = "database.db") -> List[Dict]
+```
+
 ### 8. 検索・分析API
 
 #### search_task_executions

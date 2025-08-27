@@ -106,3 +106,36 @@ CREATE INDEX IF NOT EXISTS idx_core_lib_version ON core_lib_table(core_lib_versi
 CREATE INDEX IF NOT EXISTS idx_algorithm_version ON algorithm_table(algorithm_version);
 
 
+
+-- analysis_result_table（課題分析結果テーブル）
+CREATE TABLE IF NOT EXISTS analysis_result_table (
+    analysis_result_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    analysis_result_dir TEXT,
+    analysis_timestamp TEXT,
+    evaluation_result_ID INTEGER,
+    FOREIGN KEY (evaluation_result_ID) REFERENCES evaluation_result_table(evaluation_result_ID) ON DELETE RESTRICT
+);
+
+-- problem_table（課題テーブル）
+CREATE TABLE IF NOT EXISTS problem_table (
+    problem_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    problem_name TEXT,
+    problem_description TEXT,
+    problem_status TEXT,
+    analysis_result_ID INTEGER,
+    FOREIGN KEY (analysis_result_ID) REFERENCES analysis_result_table(analysis_result_ID) ON DELETE RESTRICT
+);
+
+-- analysis_data_table（課題分析データテーブル）
+CREATE TABLE IF NOT EXISTS analysis_data_table (
+    analysis_data_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    evaluation_data_ID INTEGER,
+    analysis_result_ID INTEGER,
+    problem_ID INTEGER,
+    analysis_data_isproblem INTEGER CHECK (analysis_data_isproblem IN (0,1)),
+    analysis_data_dir TEXT,
+    analysis_data_description TEXT,
+    FOREIGN KEY (evaluation_data_ID) REFERENCES evaluation_data_table(evaluation_data_ID) ON DELETE RESTRICT,
+    FOREIGN KEY (analysis_result_ID) REFERENCES analysis_result_table(analysis_result_ID) ON DELETE RESTRICT,
+    FOREIGN KEY (problem_ID) REFERENCES problem_table(problem_ID) ON DELETE RESTRICT
+);

@@ -99,6 +99,17 @@ from .evaluation_api import (
     get_evaluation_overview,
 )
 
+from .analysis_api import (
+    create_analysis_result,
+    get_analysis_result,
+    list_analysis_results,
+    create_problem,
+    get_problem,
+    list_problems,
+    create_analysis_data,
+    list_analysis_data,
+)
+
 __version__ = "0.1.0"
 __all__ = [
     # 接続管理
@@ -184,6 +195,16 @@ __all__ = [
     "create_evaluation_data",
     "list_evaluation_data",
     "get_evaluation_overview",
+
+    # 課題分析管理
+    "create_analysis_result",
+    "get_analysis_result",
+    "list_analysis_results",
+    "create_problem",
+    "get_problem",
+    "list_problems",
+    "create_analysis_data",
+    "list_analysis_data",
 ]
 
 

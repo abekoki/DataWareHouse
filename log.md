@@ -27,7 +27,6 @@
 - 使用例（basic_usage.py, advanced_usage.py）とAPIライブラリドキュメント（api_library_documentation.md）を作成。
 - 他のモジュールが簡単にDataWareHouseにアクセスできる完全なAPIライブラリが完成。
 
-## 2025-01-15
 - Serena MCPを使用してdatawarehouseパッケージの構造解析を実施。
 - プロジェクトオンボーディングを実施し、メモリファイルに以下を記録：
   - project_overview.md: プロジェクト概要と主要機能
@@ -78,3 +77,12 @@
   - `get_evaluation_overview`（派生メトリクス計算: accuracy など）
 - `datawarehouse/__init__.py` に評価APIを公開追加（__all__ 更新）。
  - 簡易テスト: `uv run python scripts/test_evaluation_api.py` を実行し、評価結果と評価データの作成・概要算出を確認（overview.accuracy=0.9444..., data_count=1）。テストスクリプトはコミット前に削除。
+## 2025-08-27
+- 課題分析3テーブル（`analysis_result_table`, `problem_table`, `analysis_data_table`）を`00_design/schema.sql`に追加（CREATE TABLE IF NOT EXISTS）。
+- 非破壊マイグレーション `scripts/migrate_add_analysis_tables.py` を追加・実行し、新テーブルを作成。
+- API追加: `datawarehouse/analysis_api.py` を新規実装（分析結果/課題/分析データのCRUDと検証）。`datawarehouse/__init__.py` に公開追加。
+- ドキュメント更新: `00_design/api_specification.md` に課題分析APIを追記、`00_design/api_library_documentation.md` に使用方法を追記、`00_design/質問リスト.md` に課題分析テーブル追加に関する質問を追記。
+- 動作確認: `uv run python scripts/migrate_add_analysis_tables.py` 実行後、`uv run python scripts/query_db_structure.py` にてテーブル作成と外部キー有効化を確認。
+## 2025-08-27
+- E2Eテスト実行: scripts/test_analysis_api.py
+- 結果: analysis_results=1, problems=1, analysis_data=2, overview.accuracy=0.9

@@ -380,6 +380,62 @@ def get_evaluation_overview(evaluation_result_id: int) -> dict:
     """
 ```
 
+### 8. 課題分析管理API（新規）
+
+#### 課題分析結果の登録（analysis_result_table）
+```python
+def create_analysis_result(
+    analysis_result_dir: str,
+    evaluation_result_id: int,
+    analysis_timestamp: Optional[str] = None,
+) -> int:
+    """
+    課題分析の1実行（1レコード）を登録。
+    - analysis_result_dir: database.dbからの相対パス
+    - analysis_timestamp: "YYYY-MM-DD HH:MM:SS"
+    """
+```
+
+#### 課題（problem_table）の登録
+```python
+def create_problem(
+    problem_name: str,
+    problem_description: str,
+    problem_status: str,
+    analysis_result_id: int,
+) -> int:
+    """分析で抽出された課題を登録。"""
+```
+
+#### 課題分析データの登録（analysis_data_table）
+```python
+def create_analysis_data(
+    evaluation_data_id: int,
+    analysis_result_id: int,
+    analysis_data_isproblem: int,  # 0 or 1
+    analysis_data_dir: str,
+    analysis_data_description: str,
+    problem_id: Optional[int] = None,
+) -> int:
+    """
+    課題分析データを登録。
+    - isproblem==1 のとき problem_id 必須。0 のとき problem_id は NULL 可。
+    - 参照整合性は ON DELETE RESTRICT。
+    """
+```
+
+#### 取得系
+```python
+def get_analysis_result(analysis_result_id: int) -> Dict
+def list_analysis_results(evaluation_result_id: Optional[int] = None) -> List[Dict]
+def get_problem(problem_id: int) -> Dict
+def list_problems(analysis_result_id: Optional[int] = None) -> List[Dict]
+def list_analysis_data(
+    analysis_result_id: Optional[int] = None,
+    evaluation_data_id: Optional[int] = None,
+) -> List[Dict]
+```
+
 ## 検索・分析API
 
 ### 1. 複合検索API
