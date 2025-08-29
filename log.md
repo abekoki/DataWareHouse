@@ -86,3 +86,7 @@
 ## 2025-08-27
 - E2Eテスト実行: scripts/test_analysis_api.py
 - 結果: analysis_results=1, problems=1, analysis_data=2, overview.accuracy=0.9
+## 2025-08-27
+- 仕様書更新: `00_design/仕様書.md` のER図・テーブル詳細・SQLスキーマに課題分析3テーブル（analysis_result_table, problem_table, analysis_data_table）を反映。
+## 2025-08-27
+- Q&A反映: `00_design/質問リスト.md` に削除動作（RESTRICTの詳細）とインデックスの説明を追記。JST基準のtimestamp注記を仕様書とAPIに反映。

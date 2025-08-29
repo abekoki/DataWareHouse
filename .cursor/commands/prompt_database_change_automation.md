@@ -30,7 +30,7 @@
 
 【アウトプット（達成基準）】
 1. 質問事項の整理と `00_design/質問リスト.md` の更新（回答待ち/回答反映）。
-2. 仕様書更新：`00_design/ref_design_byGrok4_2.md`（ER図・テーブル詳細・関係性・SQL例）。
+2. 仕様書更新：`00_design/仕様書.md`（ER図・テーブル詳細・関係性・SQL例）。
 3. スキーマ更新：`00_design/schema.sql`（CREATE IF NOT EXISTS / 必要に応じて CHECK 制約）。
 4. 非破壊マイグレーション：`scripts/migrate_*.py` を追加/更新（存在確認 → 不足のみ作成/変更）。
 5. API仕様更新：`00_design/api_specification.md`・`00_design/api_library_documentation.md`。

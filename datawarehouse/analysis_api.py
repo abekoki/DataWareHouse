@@ -48,7 +48,7 @@ def create_analysis_result(
     """
     課題分析結果（1実行あたり1レコード）を登録。
     - analysis_result_dir: database.dbからの相対パス
-    - analysis_timestamp: "YYYY-MM-DD HH:MM:SS"（未指定可）
+    - analysis_timestamp: "YYYY-MM-DD HH:MM:SS"（未指定可, JST基準）
     """
     _validate_timestamp_format(analysis_timestamp)
 
