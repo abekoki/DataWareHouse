@@ -24,15 +24,7 @@ DataWareHouseは、ビデオデータに基づくタスクのタグ付け、コ�
 ### PyPIからインストール
 
 ```bash
-pip install datawarehouse
-```
-
-### 開発版のインストール
-
-```bash
-git clone https://github.com/your-org/datawarehouse.git
-cd datawarehouse
-pip install -e .
+pip install git+https://github.com/abekoki/DataWareHouse@remake_pip_lib
 ```
 
 ## クイックスタート
