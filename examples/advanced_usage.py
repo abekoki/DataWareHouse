@@ -4,13 +4,13 @@ DataWareHouse API 高度な使用例
 
 このスクリプトは、バージョン履歴、検索機能、分析機能などの
 高度なAPIの使用方法を示します。
+
+事前準備:
+    pip install datawarehouse
+
+実行例:
+    python advanced_usage.py
 """
-
-import sys
-from pathlib import Path
-
-# プロジェクトルートをパスに追加
-sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import datawarehouse as dwh
 
@@ -188,6 +188,32 @@ def demo_connection_management():
     print()
 
 
+def demo_schema_validation():
+    """スキーマ検証のデモ"""
+    print("=== スキーマ検証のデモ ===")
+
+    # スキーマ検証レポート取得
+    print("1. スキーマ検証レポート")
+    report = dwh.get_schema_validation_report("database.db")
+    print("レポートの最初の200文字:")
+    print(report[:200] + "...")
+
+    # 詳細な検証結果取得
+    print("\n2. 詳細な検証結果")
+    validation_result = dwh.validate_database_schema("database.db")
+    print(f"有効なスキーマ: {validation_result['is_valid']}")
+    print(f"重大問題数: {len(validation_result['issues'])}")
+    print(f"警告数: {len(validation_result['warnings'])}")
+    print(f"検出テーブル数: {len(validation_result['tables_found'])}")
+
+    # 互換性チェック
+    print("\n3. 互換性チェック")
+    is_compatible = dwh.check_database_compatibility("database.db")
+    print(f"互換性: {'✅ 有' if is_compatible else '❌ 無'}")
+
+    print()
+
+
 def main():
     """高度な使用例のデモ"""
     print("=== DataWareHouse API 高度な使用例 ===\n")
@@ -207,7 +233,10 @@ def main():
         
         # 接続管理のデモ
         demo_connection_management()
-        
+
+        # スキーマ検証のデモ
+        demo_schema_validation()
+
         print("=== 高度な使用例が正常に完了しました ===")
         
     except dwh.DWHError as e:

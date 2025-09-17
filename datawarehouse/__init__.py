@@ -110,6 +110,20 @@ from .analysis_api import (
     list_analysis_data,
 )
 
+# 検証モジュール
+from .validation import (
+    validate_database_schema,
+    get_schema_validation_report,
+    check_database_compatibility,
+    SchemaValidator
+)
+
+# CLIモジュール（オプション）
+try:
+    from . import cli
+except ImportError:
+    cli = None
+
 __version__ = "0.1.0"
 __all__ = [
     # 接続管理
@@ -205,6 +219,12 @@ __all__ = [
     "list_problems",
     "create_analysis_data",
     "list_analysis_data",
+
+    # スキーマ検証
+    "validate_database_schema",
+    "get_schema_validation_report",
+    "check_database_compatibility",
+    "SchemaValidator",
 ]
 
 

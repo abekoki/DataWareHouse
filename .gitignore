@@ -55,4 +55,90 @@ logs/
 *.tmp
 *.temp
 
+# Project-specific data and outputs (not needed for pip library)
+01_mov_data/
+02_core_lib_output/
+03_algorithm_output/
+04_evaluation_output/
+05_analysis_output/
+database.db
+log.md
+
+# Serena configuration (project-specific)
+.serena/
+
+# Excel files in design documents (not needed for library)
+00_design/*.xlsx
+00_design/*.xls
+
+# Development scripts (not needed for library)
+scripts/
+
+# Test environments and build artifacts
+test_env/
+dist/
+build/
+*.egg-info/
+
+# Coverage reports
+.coverage
+coverage.xml
+htmlcov/
+
+# Test cache
+.pytest_cache/
+.tox/
+
+# MyPy cache
+.mypy_cache/
+
+# Environment variables
+.env
+.env.*
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# PyInstaller
+*.spec
+*.exe
+*.dll
+*.lib
+
+# PyCharm
+.idea/
+
+# VSCode settings (keep if you want to share workspace settings)
+# .vscode/  # Uncomment if you want to ignore VSCode settings
+
+# Windows executables
+*.exe
+*.msi
+*.msm
+*.msp
+
+# Linux executables
+*.out
+
+# macOS
+*.dylib
+*.app
+
+# Node.js (if any)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Additional Python
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.cache/
+nosetests.xml
+scoverage.measurements.*
+
+# Additional logs
+*.log.*
+*.log-*
 

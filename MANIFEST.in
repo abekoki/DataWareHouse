@@ -1,0 +1,8 @@
+include README.md
+include CHANGELOG.md
+include LICENSE
+include docs/*.md
+include examples/*.py
+include 00_design/*.md
+include 00_design/*.sql
+recursive-include datawarehouse *.py
