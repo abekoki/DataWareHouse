@@ -281,6 +281,16 @@ except DWHError as e:
 - **識別子**: Gitコミットハッシュ（SHA-1, 40文字）
 - **履歴**: 自己参照によるバージョン履歴追跡
 
+### 仕様書
+
+詳細なデータベース仕様については以下のドキュメントを参照してください：
+
+- **[データベース仕様書](docs/specification/database_spec_with_timing.md)** - データベース設計の詳細仕様
+- **[API仕様書](docs/specification/api_specification.md)** - API設計仕様
+- **[データベース構造詳細](docs/specification/database_structure_detailed.md)** - テーブル構造の詳細
+- **[スキーマSQL](docs/specification/schema.sql)** - SQLiteスキーマ定義
+- **[全体仕様書](docs/specification/仕様書.md)** - プロジェクト全体の仕様
+
 ## トラブルシューティング
 
 ### よくある問題
