@@ -1,6 +1,0 @@
-task_id,predicted,ground_truth,correct,notes
-4_17,0,1,0,"frames 36-136, drowsy_frames=0"
-4_18,0,1,0,"frames 389-489, drowsy_frames=0"
-4_19,0,1,0,"frames 641-741, drowsy_frames=0"
-4_20,0,1,0,"frames 897-997, drowsy_frames=0"
-4_21,0,1,0,"frames 1135-1235, drowsy_frames=0"

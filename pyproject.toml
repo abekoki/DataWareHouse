@@ -1,13 +1,54 @@
 [project]
 name = "datawarehouse"
 version = "0.1.0"
-description = "Data warehouse schema and tooling for the video processing evaluation system"
-readme = "00_design/database_spec_with_timing.md"
+description = "Data warehouse library for video processing evaluation systems"
+readme = "README.md"
 requires-python = ">=3.10"
+authors = [
+    {name = "DataWarehouse Team", email = "team@example.com"}
+]
+maintainers = [
+    {name = "DataWarehouse Team", email = "team@example.com"}
+]
+keywords = [
+    "database",
+    "video-processing",
+    "evaluation",
+    "data-warehouse",
+    "sqlite",
+    "machine-learning"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Database",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "Topic :: Software Development :: Libraries :: Python Modules"
+]
 dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/your-org/datawarehouse"
+Documentation = "https://datawarehouse.readthedocs.io/"
+Repository = "https://github.com/your-org/datawarehouse"
+Issues = "https://github.com/your-org/datawarehouse/issues"
+Changelog = "https://github.com/your-org/datawarehouse/blob/main/CHANGELOG.md"
+
+[project.scripts]
+dwh-cli = "datawarehouse.cli:main"
 
 [build-system]
 requires = ["hatchling>=1.25.0"]
 build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["datawarehouse"]
 
 
